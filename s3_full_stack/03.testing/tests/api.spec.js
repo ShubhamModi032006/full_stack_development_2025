@@ -38,9 +38,58 @@ test.describe('Next.js (App Router) workbook API', () => {
 
   // optional negative tests (invalid id / not found)
   test('GET /api/companies/:id with invalid id returns 400', async ({ request }) => {
-    const r = await request.get('/api/companies/invalid-id-123');
+    const r = await request.get('/api/companies/invalid-id');
     expect(r.status()).toBe(400);
     const body = await r.json();
     expect(body).toHaveProperty('error');
+  });
+
+  test('GET /api/companies/search?location=UnknownCity returns empty list for non-existent location', async ({ request }) => {
+    const r = await request.get('/api/companies/search?location=UnknownCity');
+    expect(r.status()).toBe(200);
+    const { items } = await r.json();
+    expect(items.length).toBe(0);
+
+    // items.forEach(company => {
+    //   expect(company.location.toLowerCase()).toContain('hyderabad');
+    // });
+  });
+
+  test('GET /api/companies?skill=DSA return campanies requiring DSA skill', async ({ request }) => {
+    const r = await request.get('/api/companies?skill=DSA');
+    expect(r.status()).toBe(200);
+    const { items } = await r.json();
+    expect(items.length).toBeGreaterThan(0);
+
+    items.forEach(company => {
+      const skills = company.hiringCriteria.skills.map(s => s.toLowerCase());
+      expect(skills).toContain('dsa');
+    });
+  });
+
+  test('count all the companies', async ({ request }) => {
+    const r = await request.get('/api/companies');
+    expect(r.status()).toBe(200);
+    const { count, items } = await r.json();
+    expect(count).toBe(items.length);
+    expect(count).toBeGreaterThan(0);
+  })
+
+
+  test('filter companies by multiple conditions', async ({ request }) => {
+    const r = await request.get('/api/companies?skill=DSA&location=Hyderabad');
+    expect(r.status()).toBe(200);
+
+    const { items } = await r.json();
+    expect(items.length).toBeGreaterThan(0);
+
+    items.forEach(company => {
+      // ✅ Corrected field access
+      const skills = company.hiringCriteria.skills.map(s => s.toLowerCase());
+      expect(skills).toContain('dsa');
+
+      // ✅ Exact match
+      expect(company.location.toLowerCase()).toBe('hyderabad');
+    });
   });
 });
